@@ -10,7 +10,7 @@ import os
 MAESTRO_DIR = os.path.join(os.path.dirname(__file__), '..', 'maestro')
 
 
-def process_maestro_subset(base_dir, num_files=10, seq_length=50):
+def process_maestro_subset(base_dir, num_files=None, seq_length=50):
     # 1. Read the CSV map
     csv_path = os.path.join(base_dir, 'maestro-v3.0.0.csv')
     metadata = pd.read_csv(csv_path)
@@ -18,7 +18,12 @@ def process_maestro_subset(base_dir, num_files=10, seq_length=50):
     all_sequences = []
     all_targets = []
     
-    # 2. Loop through a small subset of files
+    # 2. Loop through files (use all if num_files is None)
+    if num_files is None:
+        num_files = len(metadata)
+    else:
+        num_files = min(num_files, len(metadata))
+
     for i in range(num_files):
         file_path = os.path.join(base_dir, metadata.iloc[i]['midi_filename'])
         print(f"Processing: {file_path}")
@@ -47,7 +52,12 @@ def process_maestro_subset(base_dir, num_files=10, seq_length=50):
             
     return np.array(all_sequences), np.array(all_targets)
 
-X, y = process_maestro_subset(MAESTRO_DIR)
+# Expose easy-to-change defaults for dataset and loader
+NUM_FILES = 20       # None -> use all files in the CSV; or set an int
+SEQ_LENGTH = 50
+BATCH_SIZE = 128       # increase batch size for faster training (if memory allows)
+
+X, y = process_maestro_subset(MAESTRO_DIR, num_files=NUM_FILES, seq_length=SEQ_LENGTH)
 
 
 class MaestroDataset(Dataset):
@@ -67,4 +77,4 @@ class MaestroDataset(Dataset):
 
 # Initialize with your arrays
 dataset = MaestroDataset(X, y)
-train_loader = DataLoader(dataset, batch_size=64, shuffle=True)
+train_loader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)

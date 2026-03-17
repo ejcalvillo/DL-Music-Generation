@@ -64,7 +64,7 @@ def train(epochs=10):
             
         print(f"Epoch {epoch+1} | Avg Loss: {total_loss/len(train_loader):.4f}")
 
-train(epochs=5)
+train(epochs=20)
 
 # %%
 # Save model to the models directory
