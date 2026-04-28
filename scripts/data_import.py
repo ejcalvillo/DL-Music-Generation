@@ -1,73 +1,58 @@
-import pandas as pd
+import os
 import numpy as np
+import pandas as pd
 import pretty_midi
 import torch
 from torch.utils.data import Dataset, DataLoader
-import os
 
 
-# Get the correct path to maestro directory relative to this file
 MAESTRO_DIR = os.path.join(os.path.dirname(__file__), '..', 'maestro')
 
 
-def process_maestro_subset(base_dir, num_files=None, seq_length=50):
-    # 1. Read the CSV map
+def process_maestro_subset(base_dir, year=None, num_files=None, seq_length=50):
     csv_path = os.path.join(base_dir, 'maestro-v3.0.0.csv')
     metadata = pd.read_csv(csv_path)
-    
-    all_sequences = []
-    all_targets = []
-    
-    # 2. Loop through files (use all if num_files is None)
-    if num_files is None:
-        num_files = len(metadata)
-    else:
-        num_files = min(num_files, len(metadata))
 
-    for i in range(num_files):
+    if year is not None:
+        metadata = metadata[metadata['year'] == year].reset_index(drop=True)
+    if num_files is not None:
+        metadata = metadata.iloc[:min(num_files, len(metadata))]
+
+    all_sequences, all_targets = [], []
+
+    for i in range(len(metadata)):
         file_path = os.path.join(base_dir, metadata.iloc[i]['midi_filename'])
         print(f"Processing: {file_path}")
-        
-        # Extract notes
-        pm = pretty_midi.PrettyMIDI(file_path)
-        instr = pm.instruments[0]
-        notes = sorted(instr.notes, key=lambda x: x.start)
-        
-        # Convert to numeric features: [Pitch, Step, Duration]
-        prev_start = notes[0].start
-        note_data = []
+
+        pm    = pretty_midi.PrettyMIDI(file_path)
+        notes = sorted(pm.instruments[0].notes, key=lambda n: n.start)
+
+        prev, note_data = notes[0].start, []
         for n in notes:
+            # log1p compresses the skewed distribution of step/duration values
+            # so MSE doesn't collapse toward near-zero averages during training.
+            # Inverted with expm1 during generation in music.py.
             note_data.append([
-                n.pitch / 127.0,          # Normalized Pitch
-                n.start - prev_start,      # Step
-                n.end - n.start            # Duration
+                n.pitch / 127.0,
+                np.log1p(n.start - prev),
+                np.log1p(n.end - n.start),
             ])
-            prev_start = n.start
-        
-        # 3. Create sliding windows
+            prev = n.start
+
         note_data = np.array(note_data)
         for j in range(len(note_data) - seq_length):
             all_sequences.append(note_data[j : j + seq_length])
             all_targets.append(note_data[j + seq_length])
-            
+
     return np.array(all_sequences), np.array(all_targets)
-
-# Expose easy-to-change defaults for dataset and loader
-NUM_FILES = 20       # None -> use all files in the CSV; or set an int
-SEQ_LENGTH = 50
-BATCH_SIZE = 128       # increase batch size for faster training (if memory allows)
-
-X, y = process_maestro_subset(MAESTRO_DIR, num_files=NUM_FILES, seq_length=SEQ_LENGTH)
 
 
 class MaestroDataset(Dataset):
     def __init__(self, X, y):
-        # Ensure data is float32 for PyTorch
-        self.X = torch.tensor(X, dtype=torch.float32)
-        # Pitch is used for CrossEntropy, so it must be Long (integer)
-        self.y_pitch = torch.tensor(y[:, 0] * 127, dtype=torch.long) 
-        self.y_step = torch.tensor(y[:, 1], dtype=torch.float32).unsqueeze(1)
-        self.y_dur = torch.tensor(y[:, 2], dtype=torch.float32).unsqueeze(1)
+        self.X       = torch.tensor(X, dtype=torch.float32)
+        self.y_pitch = torch.tensor(y[:, 0] * 127, dtype=torch.long)
+        self.y_step  = torch.tensor(y[:, 1], dtype=torch.float32).unsqueeze(1)
+        self.y_dur   = torch.tensor(y[:, 2], dtype=torch.float32).unsqueeze(1)
 
     def __len__(self):
         return len(self.X)
@@ -75,6 +60,16 @@ class MaestroDataset(Dataset):
     def __getitem__(self, idx):
         return self.X[idx], self.y_pitch[idx], self.y_step[idx], self.y_dur[idx]
 
-# Initialize with your arrays
-dataset = MaestroDataset(X, y)
-train_loader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
+
+def load_data(year=None, num_files=None, seq_length=50, batch_size=128, val_split=0.1):
+    X, y = process_maestro_subset(MAESTRO_DIR, year=year, num_files=num_files, seq_length=seq_length)
+
+    split = int(len(X) * (1 - val_split))
+    X_train, y_train = X[:split], y[:split]
+    X_val,   y_val   = X[split:], y[split:]
+
+    def make_loader(Xd, yd, shuffle):
+        return DataLoader(MaestroDataset(Xd, yd), batch_size=batch_size,
+                          shuffle=shuffle, num_workers=0, pin_memory=False)
+
+    return make_loader(X_train, y_train, shuffle=True), make_loader(X_val, y_val, shuffle=False)
