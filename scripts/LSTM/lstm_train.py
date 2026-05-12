@@ -18,7 +18,7 @@ else:
     device = torch.device("cpu")
 print(f"Using device: {device}")
 
-# ── Data ──────────────────────────────────────────────────────────────────────
+# Data loader
 print("Loading data...")
 train_loader, val_loader = load_data(
     year=C.YEAR, num_files=C.NUM_FILES,
@@ -27,7 +27,7 @@ train_loader, val_loader = load_data(
 )
 print(f"Train batches: {len(train_loader)} | Val batches: {len(val_loader)}")
 
-# ── Model ─────────────────────────────────────────────────────────────────────
+# Model
 model = MusicLSTM(
     pitch_embed_dim=C.PITCH_EMBED_DIM,
     hidden_size=C.HIDDEN_SIZE,
@@ -42,7 +42,7 @@ criterion_mse   = torch.nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=C.LEARNING_RATE, weight_decay=C.WEIGHT_DECAY)
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3)
 
-# ── Resume from checkpoint if available ───────────────────────────────────────
+# Resume from checkpoint if available
 start_epoch   = 0
 best_val_loss = float("inf")
 loss_log      = {"train": [], "val": []}
@@ -63,9 +63,9 @@ elif os.path.exists(C.MODEL_PATH):
 else:
     print("Starting from scratch.")
 
-# ── Training loop ─────────────────────────────────────────────────────────────
+# Training loop
 for epoch in range(start_epoch, C.EPOCHS):
-    # ── train ──
+    # train
     model.train()
     total = 0
     for batch_x, b_pitch, b_step, b_dur in train_loader:
@@ -88,7 +88,7 @@ for epoch in range(start_epoch, C.EPOCHS):
 
     train_loss = total / len(train_loader)
 
-    # ── validate ──
+    # validate
     model.eval()
     total = 0
     with torch.no_grad():
@@ -131,11 +131,11 @@ for epoch in range(start_epoch, C.EPOCHS):
     print(f"Epoch {epoch+1:>3}/{C.EPOCHS} | Train: {train_loss:.4f} | Val: {val_loss:.4f} | LR: {optimizer.param_groups[0]['lr']:.2e}{' *' if improved else ''}")
     scheduler.step(val_loss)
 
-# ── Done ──────────────────────────────────────────────────────────────────────
+# Loss log for graphs
 with open(C.LOSS_LOG, "w") as f:
     json.dump(loss_log, f)
 
-# Resume checkpoint no longer needed once training completes cleanly
+# Delete resume checkpoint
 if os.path.exists(C.RESUME_CKPT):
     os.remove(C.RESUME_CKPT)
 

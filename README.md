@@ -1,1 +1,89 @@
 # DL-Music-Generation
+
+A small proof-of-concept music generation project built to compare three architectures: an LSTM model, a transformer encoder model, and a transformer decoder model
+
+## Project overview
+
+- `scripts/data_import.py`: loads MAESTRO MIDI files, converts notes into training sequences, and builds PyTorch data loaders.
+- `scripts/LSTM/lstm.py`: defines the `MusicLSTM` model plus MIDI conversion utilities and generation logic.
+- `scripts/LSTM/lstm_train.py`: training loop with validation, checkpointing, and loss logging for the LSTM model.
+- `scripts/LSTM/lstm_test.ipynb`: notebook for loading a trained LSTM, plotting loss curves, generating music, and exporting MIDI.
+- `scripts/music.py`: helper functions for MIDI generation and seed prepending.
+- `maestro/`: local MAESTRO dataset and metadata used for training.
+
+## Models
+
+This repository is designed to compare three distinct architectures:
+
+- **LSTM**: a recurrent model that predicts pitch, step timing, and duration autoregressively.
+- **Transformer encoder**:
+- **Transformer decoder**:
+
+## Requirements
+
+- Python 3.8+
+- PyTorch
+- NumPy
+- pandas
+- pretty_midi
+- matplotlib
+
+Install the main dependencies with:
+
+```bash
+pip install numpy pandas pretty_midi matplotlib torch
+```
+
+If you have a GPU, install the appropriate PyTorch package for your system from https://pytorch.org.
+
+## Dataset
+
+This project uses the MAESTRO dataset. The repository expects the downloaded dataset files to live under the `maestro/` folder, including:
+
+- `maestro/maestro-v3.0.0.csv`
+- `maestro/maestro-v3.0.0.json`
+- `maestro/<year>/*.midi`
+
+The config file currently filters to a single year by default, but you can adjust that in `scripts/LSTM/config.py`.
+
+## Configuration
+
+Edit `scripts/LSTM/config.py` to change:
+
+- year selection and number of files
+- sequence length, batch size, validation split
+- LSTM architecture and training hyperparameters
+- generation settings such as temperature, minimum step/duration, and number of notes to generate
+- input/output paths for model weights, seed MIDI, and generated MIDI
+
+## Training (LSTM)
+
+Run LSTM training from the repository root:
+
+```bash
+cd scripts
+python LSTM/lstm_train.py
+```
+
+This script trains the model, saves the best checkpoint to `scripts/LSTM/models/music_lstm_v1.pth`, and writes loss history to `scripts/LSTM/models/loss_log.json`.
+
+## Generating music
+
+Open `scripts/LSTM/lstm_test.ipynb` and run the notebook cells to:
+
+1. load the trained model
+2. visualize training and validation loss
+3. generate new MIDI from a seed file
+4. prepend the seed to the generated output for a complete example
+
+The default generated output is saved to `scripts/LSTM/generated_music/lstm_output2.mid`.
+
+## Notes
+
+- The model uses a simple 2-layer LSTM with separate heads for pitch, step, and duration.
+- Input notes are normalized for pitch and converted to log-scale for step/duration during training.
+- Generation samples pitch from a softmax distribution and applies Gaussian noise to timing predictions to reduce repetition.
+
+## License
+
+This repository is provided as an experimental project for research and learning.

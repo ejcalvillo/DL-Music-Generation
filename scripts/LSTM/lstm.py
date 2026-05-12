@@ -9,7 +9,6 @@ class MusicLSTM(nn.Module):
 
         # Pitch is categorical (128 MIDI values), not a continuous number.
         # An embedding lets the model learn which pitches are musically related
-        # (octaves, harmonics) rather than treating MIDI 60 as "halfway to 127".
         self.pitch_embed = nn.Embedding(128, pitch_embed_dim)
 
         # LSTM input = learned pitch vector + raw step + raw duration
@@ -22,7 +21,6 @@ class MusicLSTM(nn.Module):
         )
 
         # LayerNorm stabilizes the hidden state before the output heads,
-        # preventing one head from being overwhelmed by large activations.
         self.norm    = nn.LayerNorm(hidden_size)
         self.dropout = nn.Dropout(dropout)
 
@@ -33,8 +31,8 @@ class MusicLSTM(nn.Module):
     def forward(self, x):
         # x: (batch, seq_len, 3)  —  [pitch_normalized, step, duration]
         pitch_int = (x[:, :, 0] * 127).long().clamp(0, 127)
-        pitch_emb = self.pitch_embed(pitch_int)          # (batch, seq_len, embed_dim)
-        x_in      = torch.cat([pitch_emb, x[:, :, 1:]], dim=-1)  # + step, dur
+        pitch_emb = self.pitch_embed(pitch_int)
+        x_in      = torch.cat([pitch_emb, x[:, :, 1:]], dim=-1)
 
         lstm_out, _ = self.lstm(x_in)
         last_out    = self.dropout(self.norm(lstm_out[:, -1, :]))

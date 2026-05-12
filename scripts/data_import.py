@@ -8,7 +8,7 @@ from torch.utils.data import Dataset, DataLoader
 
 MAESTRO_DIR = os.path.join(os.path.dirname(__file__), '..', 'maestro')
 
-
+# Data processing and loading
 def process_maestro_subset(base_dir, year=None, num_files=None, seq_length=50):
     csv_path = os.path.join(base_dir, 'maestro-v3.0.0.csv')
     metadata = pd.read_csv(csv_path)
@@ -29,9 +29,6 @@ def process_maestro_subset(base_dir, year=None, num_files=None, seq_length=50):
 
         prev, note_data = notes[0].start, []
         for n in notes:
-            # log1p compresses the skewed distribution of step/duration values
-            # so MSE doesn't collapse toward near-zero averages during training.
-            # Inverted with expm1 during generation in music.py.
             note_data.append([
                 n.pitch / 127.0,
                 np.log1p(n.start - prev),
@@ -46,7 +43,7 @@ def process_maestro_subset(base_dir, year=None, num_files=None, seq_length=50):
 
     return np.array(all_sequences), np.array(all_targets)
 
-
+# Dataset and DataLoader
 class MaestroDataset(Dataset):
     def __init__(self, X, y):
         self.X       = torch.tensor(X, dtype=torch.float32)
