@@ -38,7 +38,9 @@ If you have a GPU, install the appropriate PyTorch package for your system from 
 
 ## Dataset
 
-This project uses the MAESTRO dataset. The repository expects the downloaded dataset files to live under the `maestro/` folder, including:
+This project uses the MAESTRO dataset: https://magenta.withgoogle.com/datasets/maestro.
+
+The repository expects the downloaded dataset files to live under the `maestro/` folder, including:
 
 - `maestro/maestro-v3.0.0.csv`
 - `maestro/maestro-v3.0.0.json`
