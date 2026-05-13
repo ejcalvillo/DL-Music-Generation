@@ -68,7 +68,7 @@ Run LSTM training from the repository root:
 
 ```bash
 cd scripts
-python LSTM/lstm_train.py
+python scripts/LSTM/lstm_train.py
 ```
 
 This script trains the model, saves the best checkpoint to `scripts/LSTM/models/music_lstm_v1.pth`, and writes loss history to `scripts/LSTM/models/loss_log.json`.
