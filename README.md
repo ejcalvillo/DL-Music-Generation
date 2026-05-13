@@ -104,6 +104,25 @@ Open `scripts/Transformer-Encoder/test.ipynb` and run the notebook cells to:
 4. export the generated notes as a MIDI file
 
 The generated outputs are saved to `scripts/Transformer-Encoder/generated_music/`.
+## Training (Transformer Decoder)
+Run the Transformer training notebook from the repository root:
+```bash
+jupyter notebook Decoder_Transformer.ipynb
+```
+1. preprocesses MAESTRO MIDI files
+2. converts MIDI notes into symbolic event tokens
+3. creates training sequences
+4.trains the Transformer-based music generation model
+5.evaluates the model using Loss and MAE metrics
+
+## Generating Musoc (Decoder Transformer)
+1. load the trained Transformer model
+2. generate new symbolic music sequences
+3. convert generated tokens back into MIDI format
+4. export generated music as a .mid file
+```bash
+/kaggle/working/generated_music.mid
+```
 
 ## Notes
 
