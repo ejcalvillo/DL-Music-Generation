@@ -115,7 +115,7 @@ jupyter notebook Decoder_Transformer.ipynb
 4.trains the Transformer-based music generation model
 5.evaluates the model using Loss and MAE metrics
 
-## Generating Musoc (Decoder Transformer)
+## Generating Music (Decoder Transformer)
 1. load the trained Transformer model
 2. generate new symbolic music sequences
 3. convert generated tokens back into MIDI format
